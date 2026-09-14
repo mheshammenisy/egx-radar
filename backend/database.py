@@ -129,6 +129,42 @@ def upsert_price_bars(
         )
 
 
+def replace_price_bars(
+    symbol: str,
+    bars: Iterable[PriceBar],
+    db_path: str | Path = DEFAULT_DB_PATH,
+) -> None:
+    """Replace one symbol's stored history atomically.
+
+    This is used when a real market-data feed replaces the synthetic demo
+    history, so no stale demo-only dates remain in SQLite.
+    """
+    rows = [
+        (
+            symbol.upper(),
+            bar.date,
+            bar.open,
+            bar.high,
+            bar.low,
+            bar.close,
+            bar.volume,
+        )
+        for bar in bars
+    ]
+    if not rows:
+        return
+
+    with database_session(db_path) as connection:
+        connection.execute("DELETE FROM daily_prices WHERE symbol = ?", (symbol.upper(),))
+        connection.executemany(
+            """
+            INSERT INTO daily_prices(symbol, trade_date, open, high, low, close, volume)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+
 def list_stocks(db_path: str | Path = DEFAULT_DB_PATH) -> list[dict]:
     with database_session(db_path) as connection:
         rows = connection.execute(
