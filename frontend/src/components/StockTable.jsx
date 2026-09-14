@@ -1,7 +1,9 @@
 function getStateClass(state) {
   if (state === 'Accumulating') return 'state-accumulating'
   if (state === 'Breakout Preparation') return 'state-breakout'
-  if (state === 'Distribution') return 'state-distribution'
+  if (state === 'Fresh Breakout') return 'state-fresh-breakout'
+  if (state === 'Healthy Pullback') return 'state-pullback'
+  if (state === 'Distribution Warning') return 'state-distribution'
   return 'state-neutral'
 }
 

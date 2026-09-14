@@ -5,14 +5,31 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from demo_market_data import DEMO_SECURITIES
+from opportunity_engine import OpportunityMetrics, analyze_opportunity
+
 IndexName = Literal["EGX30", "EGX70", "EGX100"]
 StateName = Literal[
     "Accumulating",
     "Breakout Preparation",
+    "Fresh Breakout",
+    "Healthy Pullback",
+    "Distribution Warning",
     "Neutral",
-    "Distribution",
 ]
 DemoIndexName = Literal["EGX30", "EGX70"]
+
+
+class MetricsModel(BaseModel):
+    relativeVolume: float
+    trend: str
+    higherLows: bool
+    support: float
+    resistance: float
+    distanceToResistancePct: float
+    closingStrength: float
+    breakout: bool
+    healthyPullback: bool
 
 
 class Stock(BaseModel):
@@ -25,11 +42,15 @@ class Stock(BaseModel):
     change: float
     demoIndex: DemoIndexName
     isDemo: bool = True
+    why: list[str]
+    trigger: str
+    invalidation: str
+    metrics: MetricsModel
 
 
 app = FastAPI(
     title="EGX Opportunity Radar API",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 _default_origins = "http://localhost:5173,http://127.0.0.1:5173"
@@ -47,70 +68,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prototype-only records. Every value below is illustrative demo data and must
-# be replaced by a licensed/reliable market-data source before public launch.
-DEMO_STOCKS = [
-    Stock(
-        symbol="COMI",
-        company="Commercial Intl Bank",
-        state="Accumulating",
-        score=92,
-        volumeRatio=2.84,
-        price=76.40,
-        change=3.18,
-        demoIndex="EGX30",
-    ),
-    Stock(
-        symbol="SWDY",
-        company="Elsewedy Electric",
-        state="Accumulating",
-        score=87,
-        volumeRatio=2.31,
-        price=63.18,
-        change=2.46,
-        demoIndex="EGX30",
-    ),
-    Stock(
-        symbol="TMGH",
-        company="Talaat Moustafa Group",
-        state="Breakout Preparation",
-        score=79,
-        volumeRatio=1.92,
-        price=58.72,
-        change=1.27,
-        demoIndex="EGX30",
-    ),
-    Stock(
-        symbol="FWRY",
-        company="Fawry",
-        state="Breakout Preparation",
-        score=73,
-        volumeRatio=1.68,
-        price=6.41,
-        change=0.94,
-        demoIndex="EGX70",
-    ),
-    Stock(
-        symbol="EAST",
-        company="Eastern Company",
-        state="Neutral",
-        score=64,
-        volumeRatio=1.36,
-        price=25.06,
-        change=-0.38,
-        demoIndex="EGX70",
-    ),
-    Stock(
-        symbol="ORAS",
-        company="Orascom Construction",
-        state="Distribution",
-        score=58,
-        volumeRatio=1.14,
-        price=311.20,
-        change=-1.12,
-        demoIndex="EGX70",
-    ),
-]
+
+def _metrics_model(metrics: OpportunityMetrics) -> MetricsModel:
+    return MetricsModel(
+        relativeVolume=metrics.relative_volume,
+        trend=metrics.trend,
+        higherLows=metrics.higher_lows,
+        support=metrics.support,
+        resistance=metrics.resistance,
+        distanceToResistancePct=metrics.distance_to_resistance_pct,
+        closingStrength=metrics.closing_strength,
+        breakout=metrics.breakout,
+        healthyPullback=metrics.healthy_pullback,
+    )
+
+
+def _build_demo_stock(security: dict) -> Stock:
+    bars = security["bars"]
+    result = analyze_opportunity(bars)
+    latest = bars[-1]
+    previous = bars[-2]
+    daily_change = ((latest.close - previous.close) / previous.close) * 100
+
+    return Stock(
+        symbol=security["symbol"],
+        company=security["company"],
+        state=result.state,
+        score=result.score,
+        volumeRatio=result.metrics.relative_volume,
+        price=latest.close,
+        change=round(daily_change, 2),
+        demoIndex=security["demoIndex"],
+        why=result.why,
+        trigger=result.trigger,
+        invalidation=result.invalidation,
+        metrics=_metrics_model(result.metrics),
+    )
+
+
+DEMO_STOCKS = [_build_demo_stock(security) for security in DEMO_SECURITIES]
 
 
 @app.get("/")
@@ -118,6 +114,7 @@ def root():
     return {
         "message": "EGX Opportunity Radar backend is running",
         "dataMode": "demo",
+        "engineMode": "deterministic-v1",
     }
 
 
@@ -126,6 +123,7 @@ def health():
     return {
         "status": "ok",
         "dataMode": "demo",
+        "engineMode": "deterministic-v1",
     }
 
 
