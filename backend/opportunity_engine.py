@@ -95,8 +95,12 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     recent_lows = [bar.low for bar in bars[-6:]]
     higher_lows = _average(recent_lows[-3:]) > _average(recent_lows[:3])
 
-    breakout = latest.close > resistance * 1.005 and relative_volume >= 1.30
-    near_resistance = 0.0 <= distance_to_resistance_pct <= 3.0
+    breakout_confirmation_price = resistance * 1.005
+    breakout = latest.close > breakout_confirmation_price and relative_volume >= 1.30
+
+    # A close slightly above resistance but below the confirmation buffer is
+    # still treated as breakout preparation rather than a confirmed breakout.
+    near_resistance = -0.5 <= distance_to_resistance_pct <= 3.0
 
     healthy_pullback = (
         trend == "Uptrend"
@@ -175,7 +179,7 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     if breakout:
         why.append("Close confirmed above recent resistance on elevated volume")
     elif near_resistance:
-        why.append("Price is within 3% of recent resistance")
+        why.append("Price is testing the recent resistance area")
     if healthy_pullback:
         why.append("Price pulled back while remaining above the 20-day average")
     if distribution:
@@ -184,7 +188,10 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     if breakout:
         trigger = "Breakout already confirmed; watch whether price holds above prior resistance"
     else:
-        trigger = f"Daily close above EGP {resistance:.2f} with relative volume of at least 1.30×"
+        trigger = (
+            f"Daily close above EGP {breakout_confirmation_price:.2f} "
+            "with relative volume of at least 1.30×"
+        )
 
     invalidation = f"Daily close below recent support near EGP {support:.2f}"
 
