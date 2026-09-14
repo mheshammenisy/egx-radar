@@ -1,6 +1,7 @@
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from opportunity_engine import PriceBar
 
@@ -16,8 +17,29 @@ def connect(db_path: str | Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     return connection
 
 
+@contextmanager
+def database_session(
+    db_path: str | Path = DEFAULT_DB_PATH,
+) -> Iterator[sqlite3.Connection]:
+    """Yield a SQLite connection and always close it afterwards.
+
+    sqlite3.Connection's own context manager commits or rolls back, but it does
+    not close the connection. Explicit closing is required on Windows so test
+    databases can be deleted immediately after use.
+    """
+    connection = connect(db_path)
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
 def initialize_database(db_path: str | Path = DEFAULT_DB_PATH) -> None:
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS stocks (
@@ -57,7 +79,7 @@ def upsert_stock(
     is_demo: bool = False,
     db_path: str | Path = DEFAULT_DB_PATH,
 ) -> None:
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         connection.execute(
             """
             INSERT INTO stocks(symbol, company, market_index, is_demo)
@@ -91,7 +113,7 @@ def upsert_price_bars(
     if not rows:
         return
 
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         connection.executemany(
             """
             INSERT INTO daily_prices(symbol, trade_date, open, high, low, close, volume)
@@ -108,7 +130,7 @@ def upsert_price_bars(
 
 
 def list_stocks(db_path: str | Path = DEFAULT_DB_PATH) -> list[dict]:
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         rows = connection.execute(
             "SELECT symbol, company, market_index, is_demo FROM stocks ORDER BY symbol"
         ).fetchall()
@@ -116,7 +138,7 @@ def list_stocks(db_path: str | Path = DEFAULT_DB_PATH) -> list[dict]:
 
 
 def get_stock_record(symbol: str, db_path: str | Path = DEFAULT_DB_PATH) -> dict | None:
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         row = connection.execute(
             "SELECT symbol, company, market_index, is_demo FROM stocks WHERE symbol = ?",
             (symbol.upper(),),
@@ -151,7 +173,7 @@ def get_price_bars(
         """
         params = (symbol.upper(), limit)
 
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         rows = connection.execute(sql, params).fetchall()
 
     return [
@@ -168,7 +190,7 @@ def get_price_bars(
 
 
 def count_prices(symbol: str, db_path: str | Path = DEFAULT_DB_PATH) -> int:
-    with connect(db_path) as connection:
+    with database_session(db_path) as connection:
         row = connection.execute(
             "SELECT COUNT(*) AS n FROM daily_prices WHERE symbol = ?",
             (symbol.upper(),),
