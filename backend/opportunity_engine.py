@@ -185,15 +185,23 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     if distribution:
         why.append("Selling pressure is elevated relative to recent volume")
 
-    if breakout:
+    if distribution:
+        trigger = (
+            f"Distribution warning is active: volume is {relative_volume:.2f}× its "
+            "20-session average with weak price action"
+        )
+        invalidation = (
+            "Warning eases if selling pressure subsides and price recovers its short-term trend"
+        )
+    elif breakout:
         trigger = "Breakout already confirmed; watch whether price holds above prior resistance"
+        invalidation = f"Daily close below recent support near EGP {support:.2f}"
     else:
         trigger = (
             f"Daily close above EGP {breakout_confirmation_price:.2f} "
             "with relative volume of at least 1.30×"
         )
-
-    invalidation = f"Daily close below recent support near EGP {support:.2f}"
+        invalidation = f"Daily close below recent support near EGP {support:.2f}"
 
     metrics = OpportunityMetrics(
         relative_volume=round(relative_volume, 2),

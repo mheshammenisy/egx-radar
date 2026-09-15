@@ -68,6 +68,9 @@ class OpportunityEngineTests(unittest.TestCase):
 
         self.assertEqual(result.state, "Distribution Warning")
         self.assertLess(result.score, 50)
+        self.assertIn("Distribution warning is active", result.trigger)
+        self.assertIn("Warning eases", result.invalidation)
+        self.assertNotIn("Daily close below recent support", result.invalidation)
 
     def test_score_changes_when_volume_changes(self):
         normal_bars = make_series(20, 0.10)
