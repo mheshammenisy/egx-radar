@@ -12,7 +12,11 @@ from database import (
     upsert_stock,
 )
 from opportunity_engine import PriceBar
-from yahoo_import import import_symbol_from_yahoo, yahoo_symbol
+from yahoo_import import (
+    import_securities_from_yahoo,
+    import_symbol_from_yahoo,
+    yahoo_symbol,
+)
 
 
 class FakeTimestamp:
@@ -111,6 +115,27 @@ class YahooImportTests(unittest.TestCase):
         self.assertEqual(result["status"], "skipped")
         self.assertTrue(bool(get_stock_record("COMI", self.db_path)["is_demo"]))
         self.assertEqual(count_prices("COMI", self.db_path), 1)
+
+    def test_market_import_continues_when_one_symbol_is_missing(self):
+        securities = [
+            {"symbol": "GOOD", "company": "Good Co", "market_index": "EGX30"},
+            {"symbol": "MISS", "company": "Missing Co", "market_index": "EGX70"},
+        ]
+
+        def downloader(ticker, period):
+            if ticker == "GOOD.CA":
+                return self._history(30)
+            return FakeHistory([])
+
+        results = import_securities_from_yahoo(
+            securities,
+            db_path=self.db_path,
+            downloader=downloader,
+        )
+
+        self.assertEqual([result["status"] for result in results], ["imported", "skipped"])
+        self.assertIsNotNone(get_stock_record("GOOD", self.db_path))
+        self.assertIsNone(get_stock_record("MISS", self.db_path))
 
 
 if __name__ == "__main__":
