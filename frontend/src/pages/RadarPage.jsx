@@ -34,6 +34,9 @@ function RadarPage() {
     }
   }, [activeIndex])
 
+  const allDemo = stocks.length > 0 && stocks.every((stock) => stock.isDemo)
+  const statusLabel = allDemo ? 'DEMO DATA · NOT LIVE' : 'YAHOO DATA · DEVELOPMENT'
+
   return (
     <main className="app">
       <header className="topbar">
@@ -51,7 +54,7 @@ function RadarPage() {
         />
       </header>
 
-      <DemoBanner />
+      <DemoBanner isDemo={allDemo} />
 
       <section className="signals-panel">
         <div className="panel-header">
@@ -59,7 +62,7 @@ function RadarPage() {
             <h2>Opportunity signals</h2>
             <p>{activeIndex} prototype universe</p>
           </div>
-          <span>DEMO DATA · NOT LIVE</span>
+          <span>{statusLabel}</span>
         </div>
 
         {loading && <div className="status-message">Loading stocks…</div>}
