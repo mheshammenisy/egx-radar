@@ -42,9 +42,9 @@ function RadarPage() {
       <header className="topbar">
         <div>
           <div className="label">MARKET INTELLIGENCE</div>
-          <h1>EGX Opportunity Radar</h1>
+          <h1>CaptoX</h1>
           <p className="page-subtitle">
-            A focused view of stocks that may deserve attention.
+            Catch the EGX setups that deserve attention.
           </p>
         </div>
 
@@ -60,7 +60,7 @@ function RadarPage() {
         <div className="panel-header">
           <div>
             <h2>Opportunity signals</h2>
-            <p>{activeIndex} prototype universe</p>
+            <p>{activeIndex} prototype universe · ranked by opportunity score</p>
           </div>
           <span>{statusLabel}</span>
         </div>
