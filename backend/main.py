@@ -59,8 +59,8 @@ class HistoryBar(BaseModel):
 
 
 app = FastAPI(
-    title="EGX Opportunity Radar API",
-    version="0.3.0",
+    title="CaptoX API",
+    version="0.4.0",
 )
 
 _default_origins = "http://localhost:5173,http://127.0.0.1:5173"
@@ -128,7 +128,7 @@ def _build_stock(record: dict) -> Stock:
 @app.get("/")
 def root():
     return {
-        "message": "EGX Opportunity Radar backend is running",
+        "message": "CaptoX backend is running",
         "storage": "sqlite",
         "engineMode": "deterministic-v1",
     }
@@ -151,7 +151,9 @@ def get_stocks(index: IndexName = "EGX100"):
     records = list_stocks(DEFAULT_DB_PATH)
     if index != "EGX100":
         records = [record for record in records if record["market_index"] == index]
-    return [_build_stock(record) for record in records]
+
+    stocks = [_build_stock(record) for record in records]
+    return sorted(stocks, key=lambda stock: stock.score, reverse=True)
 
 
 @app.get("/stocks/{symbol}", response_model=Stock)
