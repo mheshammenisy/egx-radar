@@ -47,13 +47,18 @@ function StockDetailPage() {
     )
   }
 
+  const dataLabel = stock.isDemo ? 'DEMO ENGINE · NOT LIVE' : 'YAHOO DATA · DEVELOPMENT'
+  const sourceDescription = stock.isDemo
+    ? 'Calculated by deterministic prototype rules from demo daily OHLCV.'
+    : 'Calculated by deterministic prototype rules from stored Yahoo Finance daily OHLCV.'
+
   return (
     <main className="app">
       <button className="back-button" onClick={() => navigate('/')}>
         ← Back to Radar
       </button>
 
-      <DemoBanner />
+      <DemoBanner isDemo={stock.isDemo} />
 
       <header className="detail-header">
         <div>
@@ -94,9 +99,9 @@ function StockDetailPage() {
         <div className="panel-header">
           <div>
             <h2>Why this state?</h2>
-            <p>Calculated by deterministic prototype rules from demo daily OHLCV.</p>
+            <p>{sourceDescription}</p>
           </div>
-          <span>DEMO ENGINE · NOT LIVE</span>
+          <span>{dataLabel}</span>
         </div>
         <ul>
           {stock.why.map((reason) => (
@@ -139,12 +144,18 @@ function StockDetailPage() {
         <div className="panel-header">
           <div>
             <h2>Price performance</h2>
-            <p>Historical charting will be connected when real market data is added.</p>
+            <p>
+              {stock.isDemo
+                ? 'Historical charting will be connected when real market data is added.'
+                : 'Stored daily market history is available; chart visualization will be added in a later batch.'}
+            </p>
           </div>
-          <span>NO REAL HISTORY YET</span>
+          <span>{stock.isDemo ? 'NO REAL HISTORY YET' : 'REAL DAILY HISTORY AVAILABLE'}</span>
         </div>
         <div className="chart-placeholder">
-          Real price and volume history will appear here once a reliable market-data source is connected.
+          {stock.isDemo
+            ? 'Real price and volume history will appear here once a reliable market-data source is connected.'
+            : 'Daily Yahoo Finance OHLCV is now stored in SQLite. Chart rendering is not implemented yet.'}
         </div>
       </section>
     </main>
