@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 
 from database import (
     DEFAULT_DB_PATH,
@@ -11,6 +11,7 @@ from database import (
     replace_price_bars,
     upsert_stock,
 )
+from market_universe import MARKET_UNIVERSE
 from opportunity_engine import PriceBar
 
 YAHOO_SUFFIX = ".CA"
@@ -122,29 +123,29 @@ def import_symbol_from_yahoo(
     }
 
 
-def import_existing_stocks_from_yahoo(
+def import_securities_from_yahoo(
+    securities: Iterable[dict],
     period: str = "1y",
     db_path: str | Path = DEFAULT_DB_PATH,
     downloader: Callable | None = None,
 ) -> list[dict]:
     initialize_database(db_path)
-    records = list_stocks(db_path)
     results: list[dict] = []
 
-    for record in records:
+    for security in securities:
         try:
             result = import_symbol_from_yahoo(
-                record["symbol"],
-                record["company"],
-                record["market_index"],
+                security["symbol"],
+                security["company"],
+                security["market_index"],
                 period=period,
                 db_path=db_path,
                 downloader=downloader,
             )
         except Exception as exc:
             result = {
-                "symbol": record["symbol"],
-                "yahoo_symbol": yahoo_symbol(record["symbol"]),
+                "symbol": security["symbol"].upper(),
+                "yahoo_symbol": yahoo_symbol(security["symbol"]),
                 "status": "error",
                 "rows": 0,
                 "reason": str(exc),
@@ -154,15 +155,41 @@ def import_existing_stocks_from_yahoo(
     return results
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Import daily EGX OHLCV from Yahoo Finance into SQLite for development/testing"
+def import_market_universe_from_yahoo(
+    period: str = "1y",
+    db_path: str | Path = DEFAULT_DB_PATH,
+    downloader: Callable | None = None,
+) -> list[dict]:
+    return import_securities_from_yahoo(
+        MARKET_UNIVERSE,
+        period=period,
+        db_path=db_path,
+        downloader=downloader,
     )
-    parser.add_argument("--period", default="1y", help="Yahoo history period, e.g. 6mo, 1y, 2y")
-    parser.add_argument("--db", default=str(DEFAULT_DB_PATH), help="SQLite database path")
-    args = parser.parse_args()
 
-    results = import_existing_stocks_from_yahoo(period=args.period, db_path=args.db)
+
+def import_existing_stocks_from_yahoo(
+    period: str = "1y",
+    db_path: str | Path = DEFAULT_DB_PATH,
+    downloader: Callable | None = None,
+) -> list[dict]:
+    """Backward-compatible importer for only stocks already stored in SQLite."""
+    return import_securities_from_yahoo(
+        [
+            {
+                "symbol": record["symbol"],
+                "company": record["company"],
+                "market_index": record["market_index"],
+            }
+            for record in list_stocks(db_path)
+        ],
+        period=period,
+        db_path=db_path,
+        downloader=downloader,
+    )
+
+
+def _print_results(results: list[dict]) -> None:
     for result in results:
         if result["status"] == "imported":
             print(
@@ -174,6 +201,36 @@ def main() -> None:
                 f"{result['symbol']}: {result['status']} "
                 f"({result.get('reason', 'unknown reason')})"
             )
+
+    imported = sum(result["status"] == "imported" for result in results)
+    skipped = sum(result["status"] == "skipped" for result in results)
+    errors = sum(result["status"] == "error" for result in results)
+    print("-" * 60)
+    print(f"Universe tested: {len(results)}")
+    print(f"Imported: {imported}")
+    print(f"Skipped: {skipped}")
+    print(f"Errors: {errors}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Import daily EGX OHLCV from Yahoo Finance into SQLite for development/testing"
+    )
+    parser.add_argument("--period", default="1y", help="Yahoo history period, e.g. 6mo, 1y, 2y")
+    parser.add_argument("--db", default=str(DEFAULT_DB_PATH), help="SQLite database path")
+    parser.add_argument(
+        "--existing-only",
+        action="store_true",
+        help="Only refresh symbols already stored in SQLite instead of testing the CaptoX market universe",
+    )
+    args = parser.parse_args()
+
+    if args.existing_only:
+        results = import_existing_stocks_from_yahoo(period=args.period, db_path=args.db)
+    else:
+        results = import_market_universe_from_yahoo(period=args.period, db_path=args.db)
+
+    _print_results(results)
 
 
 if __name__ == "__main__":
