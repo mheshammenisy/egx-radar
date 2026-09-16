@@ -4,6 +4,7 @@ import DemoBanner from '../components/DemoBanner.jsx'
 import LanguageToggle from '../components/LanguageToggle.jsx'
 import MarketFilters from '../components/MarketFilters.jsx'
 import StockTable from '../components/StockTable.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 import { getStocks } from '../services/api.js'
 
@@ -13,7 +14,7 @@ function RadarPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { t, isArabic } = useLanguage()
 
   useEffect(() => {
     let cancelled = false
@@ -38,7 +39,13 @@ function RadarPage() {
           <p className="page-subtitle">{t('radar.subtitle')}</p>
         </div>
         <div className="radar-actions">
-          <LanguageToggle />
+          <div className="radar-nav-group">
+            <button className="home-button" type="button" onClick={() => navigate('/')}>
+              {isArabic ? 'الرئيسية' : 'Home'}
+            </button>
+            <ThemeToggle />
+            <LanguageToggle />
+          </div>
           <MarketFilters activeIndex={activeIndex} onChange={setActiveIndex} />
         </div>
       </header>
