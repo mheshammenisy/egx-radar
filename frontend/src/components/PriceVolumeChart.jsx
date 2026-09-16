@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 
 function formatDate(value, language) {
@@ -47,15 +47,14 @@ function PriceVolumeChart({ bars }) {
   const latest = bars[bars.length - 1]
   const selectedIndex = activeIndex ?? bars.length - 1
   const selected = bars[selectedIndex]
-
-  const selectedMeta = useMemo(() => ({
+  const selectedMeta = {
     date: formatDate(selected.date, language),
     open: selected.open.toFixed(2),
     high: selected.high.toFixed(2),
     low: selected.low.toFixed(2),
     close: selected.close.toFixed(2),
     volume: Math.round(selected.volume).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
-  }), [selected, language])
+  }
 
   const moveToPointer = (clientX) => {
     const svg = svgRef.current
