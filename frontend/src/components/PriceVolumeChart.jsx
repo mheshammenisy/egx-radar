@@ -56,6 +56,10 @@ function PriceVolumeChart({ bars }) {
     volume: Math.round(selected.volume).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
   }
 
+  const tooltipX = (xFor(selectedIndex) / width) * 100
+  const tooltipY = Math.max(22, Math.min(58, (yForPrice(selected.close) / height) * 100))
+  const tooltipSide = selectedIndex > bars.length * 0.64 ? 'tooltip-left' : 'tooltip-right'
+
   const moveToPointer = (clientX) => {
     const svg = svgRef.current
     if (!svg) return
@@ -81,75 +85,86 @@ function PriceVolumeChart({ bars }) {
         <strong>{t('chart.latestClose')}: {t('common.egp')} {latest.close.toFixed(2)}</strong>
       </div>
 
-      <div className="chart-hover-card" aria-live="polite">
-        <strong>{selectedMeta.date}</strong>
-        <span>O {selectedMeta.open}</span>
-        <span>H {selectedMeta.high}</span>
-        <span>L {selectedMeta.low}</span>
-        <span>C {selectedMeta.close}</span>
-        <span>{t('chart.volume')}: {selectedMeta.volume}</span>
+      <div className="chart-stage">
+        <div
+          className={`chart-floating-tooltip ${tooltipSide}`}
+          style={{ left: `${tooltipX}%`, top: `${tooltipY}%` }}
+          aria-live="polite"
+        >
+          <div className="chart-tooltip-date">{selectedMeta.date}</div>
+          <div className="chart-tooltip-grid">
+            <span><small>{language === 'ar' ? 'فتح' : 'Open'}</small><strong>{selectedMeta.open}</strong></span>
+            <span><small>{language === 'ar' ? 'أعلى' : 'High'}</small><strong>{selectedMeta.high}</strong></span>
+            <span><small>{language === 'ar' ? 'أدنى' : 'Low'}</small><strong>{selectedMeta.low}</strong></span>
+            <span><small>{language === 'ar' ? 'إغلاق' : 'Close'}</small><strong>{selectedMeta.close}</strong></span>
+          </div>
+          <div className="chart-tooltip-volume">
+            <small>{t('chart.volume')}</small>
+            <strong>{selectedMeta.volume}</strong>
+          </div>
+        </div>
+
+        <svg
+          ref={svgRef}
+          className="market-chart interactive-market-chart"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`${bars.length} ${t('chart.sessions')}`}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setActiveIndex(null)}
+          onTouchMove={handleTouchMove}
+        >
+          {priceTicks.map((price) => {
+            const y = yForPrice(price)
+            return (
+              <g key={price}>
+                <line className="chart-grid-line" x1={left} x2={width - right} y1={y} y2={y} />
+                <text className="chart-axis-label" x={left - 10} y={y + 4} textAnchor="end">{price.toFixed(2)}</text>
+              </g>
+            )
+          })}
+
+          <polyline className="chart-price-line" points={linePoints} fill="none" />
+
+          <line
+            className="chart-crosshair"
+            x1={xFor(selectedIndex)}
+            x2={xFor(selectedIndex)}
+            y1={top}
+            y2={volumeBottom}
+          />
+          <circle
+            className="chart-active-dot"
+            cx={xFor(selectedIndex)}
+            cy={yForPrice(selected.close)}
+            r="5.5"
+          />
+
+          <line className="chart-separator" x1={left} x2={width - right} y1={volumeTop - 14} y2={volumeTop - 14} />
+
+          {bars.map((bar, index) => {
+            const volumeHeight = (bar.volume / maxVolume) * (volumeBottom - volumeTop)
+            const x = xFor(index) - barWidth / 2
+            const y = volumeBottom - volumeHeight
+            return <rect key={`${bar.date}-${index}`} className={bar.close >= bar.open ? 'chart-volume-positive' : 'chart-volume-negative'} x={x} y={y} width={barWidth} height={Math.max(volumeHeight, 1)} rx="1" />
+          })}
+
+          {dateIndexes.map((index) => (
+            <text key={bars[index].date} className="chart-axis-label" x={xFor(index)} y={354} textAnchor={index === 0 ? 'start' : index === bars.length - 1 ? 'end' : 'middle'}>
+              {formatDate(bars[index].date, language).replace(/\s\d{4}$/, '')}
+            </text>
+          ))}
+
+          <text className="chart-section-label" x={left} y={volumeTop - 20}>{t('chart.volume')}</text>
+          <rect
+            className="chart-interaction-layer"
+            x={left}
+            y={top}
+            width={plotWidth}
+            height={volumeBottom - top}
+          />
+        </svg>
       </div>
-
-      <svg
-        ref={svgRef}
-        className="market-chart interactive-market-chart"
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={`${bars.length} ${t('chart.sessions')}`}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={() => setActiveIndex(null)}
-        onTouchMove={handleTouchMove}
-      >
-        {priceTicks.map((price) => {
-          const y = yForPrice(price)
-          return (
-            <g key={price}>
-              <line className="chart-grid-line" x1={left} x2={width - right} y1={y} y2={y} />
-              <text className="chart-axis-label" x={left - 10} y={y + 4} textAnchor="end">{price.toFixed(2)}</text>
-            </g>
-          )
-        })}
-
-        <polyline className="chart-price-line" points={linePoints} fill="none" />
-
-        <line
-          className="chart-crosshair"
-          x1={xFor(selectedIndex)}
-          x2={xFor(selectedIndex)}
-          y1={top}
-          y2={volumeBottom}
-        />
-        <circle
-          className="chart-active-dot"
-          cx={xFor(selectedIndex)}
-          cy={yForPrice(selected.close)}
-          r="5.5"
-        />
-
-        <line className="chart-separator" x1={left} x2={width - right} y1={volumeTop - 14} y2={volumeTop - 14} />
-
-        {bars.map((bar, index) => {
-          const volumeHeight = (bar.volume / maxVolume) * (volumeBottom - volumeTop)
-          const x = xFor(index) - barWidth / 2
-          const y = volumeBottom - volumeHeight
-          return <rect key={`${bar.date}-${index}`} className={bar.close >= bar.open ? 'chart-volume-positive' : 'chart-volume-negative'} x={x} y={y} width={barWidth} height={Math.max(volumeHeight, 1)} rx="1" />
-        })}
-
-        {dateIndexes.map((index) => (
-          <text key={bars[index].date} className="chart-axis-label" x={xFor(index)} y={354} textAnchor={index === 0 ? 'start' : index === bars.length - 1 ? 'end' : 'middle'}>
-            {formatDate(bars[index].date, language).replace(/\s\d{4}$/, '')}
-          </text>
-        ))}
-
-        <text className="chart-section-label" x={left} y={volumeTop - 20}>{t('chart.volume')}</text>
-        <rect
-          className="chart-interaction-layer"
-          x={left}
-          y={top}
-          width={plotWidth}
-          height={volumeBottom - top}
-        />
-      </svg>
 
       <div className="chart-hint">
         {language === 'ar' ? 'حرّك المؤشر على الرسم لعرض بيانات أي جلسة.' : 'Move across the chart to inspect any session.'}
