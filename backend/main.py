@@ -1,12 +1,17 @@
 import os
+import time
+from collections import defaultdict, deque
+from threading import Lock
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from bootstrap import ensure_demo_seed
-from database import DEFAULT_DB_PATH, get_price_bars, get_stock_record, list_stocks
+from database import DEFAULT_DB_PATH, get_price_bars, get_stock_record, initialize_database, list_stocks
 from opportunity_engine import OpportunityMetrics, analyze_opportunity
 
 IndexName = Literal["EGX30", "EGX70", "EGX100"]
@@ -19,6 +24,10 @@ StateName = Literal[
     "Neutral",
 ]
 DemoIndexName = Literal["EGX30", "EGX70"]
+
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+IS_PRODUCTION = APP_ENV == "production"
+RATE_LIMIT_PER_MINUTE = max(10, int(os.getenv("RATE_LIMIT_PER_MINUTE", "120")))
 
 
 class MetricsModel(BaseModel):
@@ -60,7 +69,10 @@ class HistoryBar(BaseModel):
 
 app = FastAPI(
     title="CaptoX API",
-    version="0.4.0",
+    version="0.5.0",
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 _default_origins = "http://localhost:5173,http://127.0.0.1:5173"
@@ -70,15 +82,61 @@ _allowed_origins = [
     if origin.strip()
 ]
 
+_default_hosts = "localhost,127.0.0.1"
+_allowed_hosts = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", _default_hosts).split(",")
+    if host.strip()
+]
+if not IS_PRODUCTION and "testserver" not in _allowed_hosts:
+    _allowed_hosts.append("testserver")
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["GET"],
-    allow_headers=["*"],
+    allow_headers=["Accept", "Content-Type"],
 )
 
-ensure_demo_seed(DEFAULT_DB_PATH)
+_rate_buckets: dict[str, deque[float]] = defaultdict(deque)
+_rate_lock = Lock()
+
+
+@app.middleware("http")
+async def security_and_rate_limit(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+
+    if request.url.path != "/health":
+        with _rate_lock:
+            bucket = _rate_buckets[client_ip]
+            cutoff = now - 60.0
+            while bucket and bucket[0] < cutoff:
+                bucket.popleft()
+            if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many requests. Please try again shortly."},
+                    headers={"Retry-After": "60"},
+                )
+            bucket.append(now)
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store"
+    if IS_PRODUCTION:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+initialize_database(DEFAULT_DB_PATH)
+if os.getenv("ENABLE_DEMO_SEED", "true" if not IS_PRODUCTION else "false").lower() == "true":
+    ensure_demo_seed(DEFAULT_DB_PATH)
 
 
 def _metrics_model(metrics: OpportunityMetrics) -> MetricsModel:
@@ -131,13 +189,16 @@ def root():
         "message": "CaptoX backend is running",
         "storage": "sqlite",
         "engineMode": "deterministic-v1",
+        "environment": APP_ENV,
     }
 
 
 @app.get("/health")
 def health():
     records = list_stocks(DEFAULT_DB_PATH)
-    data_mode = "demo" if records and all(bool(r["is_demo"]) for r in records) else "stored"
+    data_mode = "empty"
+    if records:
+        data_mode = "demo" if all(bool(r["is_demo"]) for r in records) else "stored"
     return {
         "status": "ok",
         "storage": "sqlite",
@@ -158,7 +219,11 @@ def get_stocks(index: IndexName = "EGX100"):
 
 @app.get("/stocks/{symbol}", response_model=Stock)
 def get_stock(symbol: str):
-    record = get_stock_record(symbol, DEFAULT_DB_PATH)
+    clean_symbol = symbol.strip().upper()
+    if not clean_symbol.isalnum() or len(clean_symbol) > 12:
+        raise HTTPException(status_code=400, detail="Invalid stock symbol")
+
+    record = get_stock_record(clean_symbol, DEFAULT_DB_PATH)
     if not record:
         raise HTTPException(status_code=404, detail="Stock not found")
     return _build_stock(record)
@@ -169,11 +234,15 @@ def get_stock_history(symbol: str, limit: int = 60):
     if limit < 1 or limit > 500:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
 
-    record = get_stock_record(symbol, DEFAULT_DB_PATH)
+    clean_symbol = symbol.strip().upper()
+    if not clean_symbol.isalnum() or len(clean_symbol) > 12:
+        raise HTTPException(status_code=400, detail="Invalid stock symbol")
+
+    record = get_stock_record(clean_symbol, DEFAULT_DB_PATH)
     if not record:
         raise HTTPException(status_code=404, detail="Stock not found")
 
-    bars = get_price_bars(symbol, DEFAULT_DB_PATH, limit=limit)
+    bars = get_price_bars(clean_symbol, DEFAULT_DB_PATH, limit=limit)
     return [
         HistoryBar(
             date=bar.date,
