@@ -1,14 +1,18 @@
+import { useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 
 function formatDate(value, language) {
   return new Intl.DateTimeFormat(language === 'ar' ? 'ar-EG' : 'en-GB', {
     day: '2-digit',
     month: 'short',
+    year: 'numeric',
   }).format(new Date(`${value}T00:00:00`))
 }
 
 function PriceVolumeChart({ bars }) {
   const { language, t } = useLanguage()
+  const svgRef = useRef(null)
+  const [activeIndex, setActiveIndex] = useState(null)
 
   if (!bars || bars.length < 2) {
     return <div className="chart-placeholder">{t('chart.insufficient')}</div>
@@ -41,15 +45,62 @@ function PriceVolumeChart({ bars }) {
   const priceTicks = Array.from({ length: 5 }, (_, index) => priceMax - (index / 4) * priceRange)
   const dateIndexes = [0, Math.floor((bars.length - 1) / 2), bars.length - 1]
   const latest = bars[bars.length - 1]
+  const selectedIndex = activeIndex ?? bars.length - 1
+  const selected = bars[selectedIndex]
+
+  const selectedMeta = useMemo(() => ({
+    date: formatDate(selected.date, language),
+    open: selected.open.toFixed(2),
+    high: selected.high.toFixed(2),
+    low: selected.low.toFixed(2),
+    close: selected.close.toFixed(2),
+    volume: Math.round(selected.volume).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
+  }), [selected, language])
+
+  const moveToPointer = (clientX) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    const relativeX = ((clientX - rect.left) / rect.width) * width
+    const clamped = Math.max(left, Math.min(width - right, relativeX))
+    const ratio = (clamped - left) / plotWidth
+    const index = Math.round(ratio * (bars.length - 1))
+    setActiveIndex(Math.max(0, Math.min(bars.length - 1, index)))
+  }
+
+  const handlePointerMove = (event) => moveToPointer(event.clientX)
+
+  const handleTouchMove = (event) => {
+    const touch = event.touches?.[0]
+    if (touch) moveToPointer(touch.clientX)
+  }
 
   return (
     <div className="market-chart-wrap">
-      <div className="chart-summary">
+      <div className="chart-summary chart-summary-interactive">
         <span>{bars.length} {t('chart.sessions')}</span>
         <strong>{t('chart.latestClose')}: {t('common.egp')} {latest.close.toFixed(2)}</strong>
       </div>
 
-      <svg className="market-chart" viewBox={`0 0 ${width} ${height}`} role="img">
+      <div className="chart-hover-card" aria-live="polite">
+        <strong>{selectedMeta.date}</strong>
+        <span>O {selectedMeta.open}</span>
+        <span>H {selectedMeta.high}</span>
+        <span>L {selectedMeta.low}</span>
+        <span>C {selectedMeta.close}</span>
+        <span>{t('chart.volume')}: {selectedMeta.volume}</span>
+      </div>
+
+      <svg
+        ref={svgRef}
+        className="market-chart interactive-market-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`${bars.length} ${t('chart.sessions')}`}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setActiveIndex(null)}
+        onTouchMove={handleTouchMove}
+      >
         {priceTicks.map((price) => {
           const y = yForPrice(price)
           return (
@@ -61,7 +112,21 @@ function PriceVolumeChart({ bars }) {
         })}
 
         <polyline className="chart-price-line" points={linePoints} fill="none" />
-        <circle className="chart-latest-dot" cx={xFor(bars.length - 1)} cy={yForPrice(latest.close)} r="4.5" />
+
+        <line
+          className="chart-crosshair"
+          x1={xFor(selectedIndex)}
+          x2={xFor(selectedIndex)}
+          y1={top}
+          y2={volumeBottom}
+        />
+        <circle
+          className="chart-active-dot"
+          cx={xFor(selectedIndex)}
+          cy={yForPrice(selected.close)}
+          r="5.5"
+        />
+
         <line className="chart-separator" x1={left} x2={width - right} y1={volumeTop - 14} y2={volumeTop - 14} />
 
         {bars.map((bar, index) => {
@@ -73,12 +138,23 @@ function PriceVolumeChart({ bars }) {
 
         {dateIndexes.map((index) => (
           <text key={bars[index].date} className="chart-axis-label" x={xFor(index)} y={354} textAnchor={index === 0 ? 'start' : index === bars.length - 1 ? 'end' : 'middle'}>
-            {formatDate(bars[index].date, language)}
+            {formatDate(bars[index].date, language).replace(/\s\d{4}$/, '')}
           </text>
         ))}
 
         <text className="chart-section-label" x={left} y={volumeTop - 20}>{t('chart.volume')}</text>
+        <rect
+          className="chart-interaction-layer"
+          x={left}
+          y={top}
+          width={plotWidth}
+          height={volumeBottom - top}
+        />
       </svg>
+
+      <div className="chart-hint">
+        {language === 'ar' ? 'حرّك المؤشر على الرسم لعرض بيانات أي جلسة.' : 'Move across the chart to inspect any session.'}
+      </div>
     </div>
   )
 }
