@@ -3,6 +3,7 @@ import LandingPage from './pages/LandingPage.jsx'
 import RadarPage from './pages/RadarPage.jsx'
 import StockDetailPage from './pages/StockDetailPage.jsx'
 import './App.css'
+import './production.css'
 
 function App() {
   return (
