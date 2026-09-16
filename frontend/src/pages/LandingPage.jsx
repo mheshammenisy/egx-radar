@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import LanguageToggle from '../components/LanguageToggle.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 
 const states = [
@@ -32,7 +33,10 @@ function LandingPage() {
         <div className="landing-nav-links">
           <a href="#how-it-works">{t('landing.howItWorksNav')}</a>
           <a href="#signals">{t('landing.signalsNav')}</a>
-          <LanguageToggle />
+          <div className="nav-control-group">
+            <ThemeToggle />
+            <LanguageToggle />
+          </div>
           <button className="button button-secondary" onClick={() => navigate('/radar')}>
             {t('common.openRadar')}
           </button>
