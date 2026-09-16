@@ -53,7 +53,7 @@ function StockDetailPage() {
     return (
       <main className="app status-page">
         <p>{error || 'Stock not found'}</p>
-        <button className="back-button" onClick={() => navigate('/')}>
+        <button className="back-button" onClick={() => navigate('/radar')}>
           ← Back to Radar
         </button>
       </main>
@@ -67,7 +67,7 @@ function StockDetailPage() {
 
   return (
     <main className="app">
-      <button className="back-button" onClick={() => navigate('/')}>
+      <button className="back-button" onClick={() => navigate('/radar')}>
         ← Back to Radar
       </button>
 
