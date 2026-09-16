@@ -1,0 +1,117 @@
+.language-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(17, 28, 42, 0.72);
+}
+
+.language-toggle button {
+  min-width: 44px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.language-toggle button.active {
+  background: rgba(53, 214, 160, 0.14);
+  color: var(--positive);
+}
+
+.radar-actions,
+.detail-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.detail-toolbar {
+  justify-content: space-between;
+}
+
+.detail-toolbar .back-button {
+  margin-bottom: 0;
+}
+
+html[dir='rtl'] body {
+  font-family: Arial, Tahoma, sans-serif;
+}
+
+html[dir='rtl'] .landing-page,
+html[dir='rtl'] .app {
+  text-align: right;
+}
+
+html[dir='rtl'] .hero-copy h1,
+html[dir='rtl'] .section-heading,
+html[dir='rtl'] .footer-copy {
+  text-align: right;
+}
+
+html[dir='rtl'] .hero-trust-line span::before {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+html[dir='rtl'] .landing-strip > div {
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+
+html[dir='rtl'] .landing-strip > div:last-child {
+  border-left: 0;
+}
+
+html[dir='rtl'] .stock-row {
+  text-align: right;
+}
+
+html[dir='rtl'] .detail-price {
+  text-align: left;
+}
+
+html[dir='rtl'] .preview-state,
+html[dir='rtl'] .change-positive,
+html[dir='rtl'] .change-negative {
+  justify-self: end;
+}
+
+html[dir='rtl'] .brand-wordmark,
+html[dir='rtl'] .symbol-cell,
+html[dir='rtl'] .price,
+html[dir='rtl'] .preview-row strong,
+html[dir='rtl'] .preview-score,
+html[dir='rtl'] .market-chart {
+  direction: ltr;
+}
+
+@media (max-width: 900px) {
+  .radar-actions {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  html[dir='rtl'] .detail-price {
+    text-align: right;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-nav-links {
+    gap: 8px;
+  }
+
+  .landing-nav-links .language-toggle {
+    display: inline-flex;
+  }
+
+  .landing-nav-links .button-secondary {
+    width: auto;
+  }
+}
