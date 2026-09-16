@@ -1,0 +1,131 @@
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(17, 28, 42, 0.78);
+}
+
+.language-switch button {
+  min-width: 48px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+}
+
+.language-switch button.active {
+  background: rgba(53, 214, 160, 0.14);
+  color: var(--positive);
+}
+
+html[dir='rtl'] body {
+  font-family: Arial, Tahoma, sans-serif;
+}
+
+html[dir='rtl'] .app,
+html[dir='rtl'] .landing-page {
+  text-align: right;
+}
+
+html[dir='rtl'] .stock-row {
+  text-align: right;
+}
+
+html[dir='rtl'] .detail-price {
+  text-align: left;
+}
+
+html[dir='rtl'] .hero-trust-line span::before {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+html[dir='rtl'] .landing-strip > div {
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+
+html[dir='rtl'] .landing-strip > div:last-child {
+  border-left: 0;
+}
+
+.chart-summary-interactive {
+  align-items: center;
+}
+
+.chart-hover-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 42px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(53, 214, 160, 0.18);
+  border-radius: 10px;
+  background: rgba(53, 214, 160, 0.05);
+  color: var(--muted-strong);
+  font-size: 12px;
+}
+
+.chart-hover-card strong {
+  color: var(--text);
+}
+
+.interactive-market-chart {
+  cursor: crosshair;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.chart-crosshair {
+  stroke: rgba(241, 245, 249, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+.chart-active-dot {
+  fill: var(--positive);
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 6px rgba(53, 214, 160, 0.55));
+  pointer-events: none;
+}
+
+.chart-interaction-layer {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.chart-hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  html[dir='rtl'] .detail-price {
+    text-align: right;
+  }
+
+  html[dir='rtl'] .landing-strip > div {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .language-switch {
+    flex-shrink: 0;
+  }
+
+  .chart-hover-card {
+    gap: 6px 10px;
+  }
+}
