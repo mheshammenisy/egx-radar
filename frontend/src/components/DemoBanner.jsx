@@ -1,12 +1,12 @@
+import { useLanguage } from '../i18n/LanguageContext.jsx'
+
 function DemoBanner({ isDemo = true }) {
+  const { t } = useLanguage()
+
   return (
     <div className="demo-banner" role="status">
-      <strong>{isDemo ? 'Prototype mode' : 'Development data'}</strong>
-      <span>
-        {isDemo
-          ? 'Current prices, scores, volume ratios, and index membership are demo data — not live market data.'
-          : 'Market data is currently sourced from Yahoo Finance for development/testing and may be delayed or incomplete.'}
-      </span>
+      <strong>{isDemo ? t('banner.prototype') : t('banner.development')}</strong>
+      <span>{isDemo ? t('banner.demoText') : t('banner.yahooText')}</span>
     </div>
   )
 }
