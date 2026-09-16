@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import DemoBanner from '../components/DemoBanner.jsx'
 import LanguageToggle from '../components/LanguageToggle.jsx'
 import PriceVolumeChart from '../components/PriceVolumeChart.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 import { getStock, getStockHistory } from '../services/api.js'
 
@@ -59,7 +60,10 @@ function StockDetailPage() {
     <main className="app">
       <div className="detail-toolbar">
         <button className="back-button" onClick={() => navigate('/radar')}>{t('common.backToRadar')}</button>
-        <LanguageToggle />
+        <div className="nav-control-group">
+          <ThemeToggle />
+          <LanguageToggle />
+        </div>
       </div>
 
       <DemoBanner isDemo={stock.isDemo} />
