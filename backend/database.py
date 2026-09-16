@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -5,7 +6,8 @@ from typing import Iterable, Iterator
 
 from opportunity_engine import PriceBar
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent / "data" / "egx_radar.db"
+_DEFAULT_LOCAL_DB_PATH = Path(__file__).resolve().parent / "data" / "egx_radar.db"
+DEFAULT_DB_PATH = Path(os.getenv("DATABASE_PATH", str(_DEFAULT_LOCAL_DB_PATH))).expanduser()
 
 
 def connect(db_path: str | Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
@@ -14,6 +16,8 @@ def connect(db_path: str | Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA busy_timeout = 5000")
     return connection
 
 
