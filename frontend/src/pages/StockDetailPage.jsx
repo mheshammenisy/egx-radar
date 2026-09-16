@@ -1,24 +1,37 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DemoBanner from '../components/DemoBanner.jsx'
-import { getStock } from '../services/api.js'
+import PriceVolumeChart from '../components/PriceVolumeChart.jsx'
+import { getStock, getStockHistory } from '../services/api.js'
 
 function StockDetailPage() {
   const { symbol } = useParams()
   const navigate = useNavigate()
   const [stock, setStock] = useState(null)
+  const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [historyError, setHistoryError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
 
     setLoading(true)
     setError(null)
+    setHistoryError(null)
 
-    getStock(symbol)
-      .then((data) => {
-        if (!cancelled) setStock(data)
+    Promise.all([
+      getStock(symbol),
+      getStockHistory(symbol, 60).catch((err) => {
+        if (!cancelled) setHistoryError(err.message)
+        return []
+      }),
+    ])
+      .then(([stockData, historyData]) => {
+        if (!cancelled) {
+          setStock(stockData)
+          setHistory(historyData)
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message)
@@ -147,16 +160,21 @@ function StockDetailPage() {
             <p>
               {stock.isDemo
                 ? 'Historical charting will be connected when real market data is added.'
-                : 'Stored daily market history is available; chart visualization will be added in a later batch.'}
+                : 'Latest 60 stored daily sessions. Line = closing price; bars = daily volume.'}
             </p>
           </div>
-          <span>{stock.isDemo ? 'NO REAL HISTORY YET' : 'REAL DAILY HISTORY AVAILABLE'}</span>
+          <span>{stock.isDemo ? 'NO REAL HISTORY YET' : 'REAL DAILY HISTORY'}</span>
         </div>
-        <div className="chart-placeholder">
-          {stock.isDemo
-            ? 'Real price and volume history will appear here once a reliable market-data source is connected.'
-            : 'Daily Yahoo Finance OHLCV is now stored in SQLite. Chart rendering is not implemented yet.'}
-        </div>
+
+        {historyError && <div className="status-message error-message">{historyError}</div>}
+
+        {!historyError && stock.isDemo && (
+          <div className="chart-placeholder">
+            Real price and volume history will appear here once a reliable market-data source is connected.
+          </div>
+        )}
+
+        {!historyError && !stock.isDemo && <PriceVolumeChart bars={history} />}
       </section>
     </main>
   )
