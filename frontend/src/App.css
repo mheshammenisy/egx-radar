@@ -346,6 +346,73 @@ h1 {
   text-align: center;
 }
 
+.market-chart-wrap {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #0c1623;
+  overflow-x: auto;
+}
+
+.chart-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chart-summary strong {
+  color: var(--text);
+}
+
+.market-chart {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.chart-grid-line,
+.chart-separator {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-price-line {
+  stroke: var(--positive);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-latest-dot {
+  fill: var(--positive);
+  stroke: #dffcf2;
+  stroke-width: 2;
+}
+
+.chart-axis-label,
+.chart-section-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-section-label {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.chart-volume-positive {
+  fill: rgba(53, 214, 160, 0.68);
+}
+
+.chart-volume-negative {
+  fill: rgba(239, 104, 112, 0.62);
+}
+
 .status-page {
   min-height: 50vh;
   display: flex;
@@ -404,5 +471,9 @@ h1 {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .chart-summary {
+    flex-direction: column;
   }
 }
