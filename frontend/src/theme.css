@@ -90,6 +90,13 @@ html[data-theme='light'] .footer-status {
   color: #475569;
 }
 
+html[data-theme='light'] .landing-state-pill {
+  color: #007f63;
+  background: rgba(0, 169, 127, 0.10);
+  border-color: rgba(0, 169, 127, 0.32);
+  font-weight: 700;
+}
+
 html[data-theme='light'] .button-secondary,
 html[data-theme='light'] .button-ghost,
 html[data-theme='light'] .filters button,
