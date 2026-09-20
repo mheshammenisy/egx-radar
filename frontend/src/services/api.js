@@ -29,4 +29,8 @@ export function getStock(symbol) {
   return request(`/stocks/${encodeURIComponent(symbol)}`)
 }
 
+export function getStockHistory(symbol, limit = 60) {
+  return request(`/stocks/${encodeURIComponent(symbol)}/history?limit=${limit}`)
+}
+
 export { API_BASE_URL }

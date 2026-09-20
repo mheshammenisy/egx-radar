@@ -51,6 +51,43 @@ class OpportunityEngineTests(unittest.TestCase):
         self.assertTrue(result.metrics.breakout)
         self.assertGreaterEqual(result.score, 70)
 
+    def test_extended_breakout_keeps_state_but_gets_chase_penalty(self):
+        bars = make_series(10, 0.10)
+        prior_resistance = max(bar.high for bar in bars[-21:-1])
+        last = bars[-1]
+        previous = bars[-2]
+
+        moderate_bars = list(bars)
+        moderate_close = prior_resistance + 0.7
+        moderate_bars[-1] = PriceBar(
+            date=last.date,
+            open=previous.close,
+            high=moderate_close + 0.4,
+            low=previous.close - 0.1,
+            close=moderate_close,
+            volume=1800.0,
+        )
+
+        extended_bars = list(bars)
+        extended_close = previous.close * 1.11
+        extended_bars[-1] = PriceBar(
+            date=last.date,
+            open=previous.close,
+            high=extended_close + 0.4,
+            low=previous.close - 0.1,
+            close=extended_close,
+            volume=1800.0,
+        )
+
+        moderate = analyze_opportunity(moderate_bars)
+        extended = analyze_opportunity(extended_bars)
+
+        self.assertEqual(moderate.state, "Fresh Breakout")
+        self.assertEqual(extended.state, "Fresh Breakout")
+        self.assertLess(extended.score, moderate.score)
+        self.assertTrue(any("elevated chase risk" in reason for reason in extended.why))
+        self.assertIn("chase risk is elevated", extended.trigger)
+
     def test_distribution_warning_detected(self):
         bars = make_series(30, -0.12)
         last = bars[-1]

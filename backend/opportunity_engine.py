@@ -75,6 +75,11 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     distance_to_resistance_pct = (
         (resistance - latest.close) / resistance * 100 if resistance > 0 else 0.0
     )
+    daily_change_pct = (
+        ((latest.close - previous.close) / previous.close) * 100
+        if previous.close > 0
+        else 0.0
+    )
 
     candle_range = max(latest.high - latest.low, 1e-9)
     closing_strength = max(
@@ -142,6 +147,15 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
     else:
         state = "Neutral"
 
+    # A breakout can still be technically strong while already being too
+    # extended to deserve the scanner's highest ranking. Keep the state as
+    # Fresh Breakout, but penalize large one-day jumps so CaptoX favors earlier
+    # setups over stocks that may already be in chase territory.
+    chase_risk = breakout and daily_change_pct >= 7.0
+    chase_penalty = 0
+    if chase_risk:
+        chase_penalty = 30 if daily_change_pct >= 10.0 else 20
+
     score = 35.0
     if trend == "Uptrend":
         score += 20
@@ -161,6 +175,7 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
         score += 8
     if distribution:
         score -= 20
+    score -= chase_penalty
 
     final_score = max(0, min(100, round(score)))
 
@@ -184,6 +199,10 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
         why.append("Price pulled back while remaining above the 20-day average")
     if distribution:
         why.append("Selling pressure is elevated relative to recent volume")
+    if chase_risk:
+        why.append(
+            f"Strong breakout, but the stock is already up {daily_change_pct:.2f}% today — elevated chase risk"
+        )
 
     if distribution:
         trigger = (
@@ -193,6 +212,12 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
         invalidation = (
             "Warning eases if selling pressure subsides and price recovers its short-term trend"
         )
+    elif breakout and chase_risk:
+        trigger = (
+            f"Breakout confirmed, but chase risk is elevated after a {daily_change_pct:.2f}% daily move; "
+            "watch for consolidation or a hold above prior resistance"
+        )
+        invalidation = f"Daily close below recent support near EGP {support:.2f}"
     elif breakout:
         trigger = "Breakout already confirmed; watch whether price holds above prior resistance"
         invalidation = f"Daily close below recent support near EGP {support:.2f}"
