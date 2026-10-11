@@ -34,29 +34,41 @@ function StockTable({ stocks, onSelect }) {
           key={stock.symbol}
           onClick={() => onSelect(stock.symbol)}
         >
-          <span className="symbol-cell">
+          <span className="symbol-cell mobile-card-head">
             <strong>{stock.symbol}</strong>
             <small>{stock.company}</small>
           </span>
 
-          <span>
+          <span className="mobile-field mobile-state-field">
+            <small className="mobile-field-label">{t('radar.state')}</small>
             <span className={`state-badge ${getStateClass(stock.state)}`}>
               ● {translateState(stock.state)}
             </span>
           </span>
 
-          <span className="score-cell">
+          <span className="score-cell mobile-field mobile-score-field">
+            <small className="mobile-field-label">{t('radar.opportunityScore')}</small>
             <span className="score-bar">
               <span className="score-fill" style={{ width: `${stock.score}%` }} />
             </span>
             <strong>{stock.score}</strong>
           </span>
 
-          <strong>{stock.volumeRatio.toFixed(2)}×</strong>
-          <span className="price">{t('common.egp')} {stock.price.toFixed(2)}</span>
+          <span className="mobile-field">
+            <small className="mobile-field-label">{t('radar.volumeRatio')}</small>
+            <strong>{stock.volumeRatio.toFixed(2)}×</strong>
+          </span>
 
-          <span className={stock.change >= 0 ? 'change-positive' : 'change-negative'}>
-            {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+          <span className="mobile-field">
+            <small className="mobile-field-label">{t('radar.price')}</small>
+            <span className="price">{t('common.egp')} {stock.price.toFixed(2)}</span>
+          </span>
+
+          <span className="mobile-field mobile-change-field">
+            <small className="mobile-field-label">{t('radar.change')}</small>
+            <span className={stock.change >= 0 ? 'change-positive' : 'change-negative'}>
+              {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+            </span>
           </span>
         </button>
       ))}
