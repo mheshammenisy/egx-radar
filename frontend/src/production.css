@@ -195,3 +195,40 @@ html[data-theme='dark'] .chart-crosshair {
     padding: 12px;
   }
 }
+
+
+@media (max-width: 700px) {
+  .chart-stage {
+    min-height: 250px;
+  }
+
+  .chart-floating-tooltip {
+    width: min(190px, calc(100vw - 70px));
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .chart-floating-tooltip.tooltip-right,
+  .chart-floating-tooltip.tooltip-left {
+    transform: translate(-50%, -50%);
+  }
+
+  .chart-floating-tooltip {
+    left: 50% !important;
+    top: 34% !important;
+  }
+
+  .chart-tooltip-grid {
+    gap: 6px;
+  }
+
+  .chart-tooltip-grid strong,
+  .chart-tooltip-volume strong {
+    font-size: 13px;
+  }
+
+  .chart-hint {
+    padding-inline: 8px;
+    line-height: 1.4;
+  }
+}

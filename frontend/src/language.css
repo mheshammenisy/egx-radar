@@ -115,3 +115,35 @@ html[dir='rtl'] .market-chart {
     width: auto;
   }
 }
+
+
+@media (max-width: 700px) {
+  html[dir='rtl'] .mobile-field {
+    align-items: flex-end;
+  }
+
+  html[dir='rtl'] .mobile-score-field {
+    grid-template-columns: auto 1fr;
+  }
+
+  html[dir='rtl'] .mobile-score-field .mobile-field-label {
+    grid-column: 1 / -1;
+  }
+
+  html[dir='rtl'] .mobile-card-head {
+    align-items: flex-end;
+  }
+
+  html[dir='rtl'] .detail-price {
+    text-align: right;
+  }
+
+  html[dir='rtl'] .landing-nav-links {
+    justify-content: flex-start;
+  }
+
+  html[dir='rtl'] .hero-actions,
+  html[dir='rtl'] .hero-trust-line {
+    justify-content: flex-start;
+  }
+}
