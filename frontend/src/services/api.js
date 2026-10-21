@@ -2,8 +2,8 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 ).replace(/\/$/, '')
 
-async function request(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`)
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, options)
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`
@@ -31,6 +31,14 @@ export function getStock(symbol) {
 
 export function getStockHistory(symbol, limit = 60) {
   return request(`/stocks/${encodeURIComponent(symbol)}/history?limit=${limit}`)
+}
+
+export function getAIAnalysis(symbol, language = 'en') {
+  return request(`/stocks/${encodeURIComponent(symbol)}/ai-analysis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language }),
+  })
 }
 
 export { API_BASE_URL }

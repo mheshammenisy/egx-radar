@@ -1370,3 +1370,248 @@ h1 {
     align-items: flex-end;
   }
 }
+
+
+/* Stock decision, target, and AI research panels */
+.decision-state {
+  color: var(--positive);
+  font-weight: 800;
+}
+
+.decision-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.decision-status span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.confirmation-box {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid rgba(53, 214, 160, 0.26);
+  border-radius: 14px;
+  background: rgba(53, 214, 160, 0.07);
+}
+
+.confirmation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.confirmation-grid > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.confirmation-grid > div > span {
+  display: inline-grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--positive);
+  color: #04130f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.confirmation-grid p,
+.confirmation-complete p,
+.invalidation-callout p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.current-volume-note {
+  margin: 14px 0 0;
+  color: var(--muted-strong);
+}
+
+.risk-box {
+  border-color: rgba(239, 104, 112, 0.28);
+  background: rgba(239, 104, 112, 0.08);
+  color: var(--negative);
+}
+
+.invalidation-callout {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(239, 104, 112, 0.25);
+  border-radius: 14px;
+  background: rgba(239, 104, 112, 0.06);
+}
+
+.invalidation-callout > span {
+  color: var(--negative);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.invalidation-callout > strong {
+  color: var(--negative);
+}
+
+.invalidation-callout p {
+  grid-column: 1 / -1;
+  color: var(--muted-strong);
+  font-size: 13px;
+}
+
+.target-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.target-card {
+  display: flex;
+  min-height: 122px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.target-card span,
+.target-card small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.target-card strong {
+  font-size: 20px;
+}
+
+.entry-card {
+  border-color: rgba(53, 214, 160, 0.28);
+  background: rgba(53, 214, 160, 0.07);
+}
+
+.ai-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.ai-analysis-result {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.ai-analysis-result article,
+.ai-sources {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.ai-analysis-result h3,
+.ai-sources h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.ai-analysis-result p,
+.ai-analysis-result li {
+  color: var(--muted-strong);
+  line-height: 1.6;
+}
+
+.ai-analysis-result p {
+  margin-bottom: 0;
+}
+
+.ai-analysis-result ul {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+.ai-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ai-conclusion {
+  border-color: rgba(53, 214, 160, 0.30) !important;
+}
+
+.ai-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-sources a {
+  color: var(--positive);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.ai-sources a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 800px) {
+  .target-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ai-panel .panel-header {
+    align-items: stretch;
+  }
+
+  .ai-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .confirmation-grid,
+  .target-grid,
+  .ai-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .invalidation-callout {
+    grid-template-columns: 1fr;
+  }
+
+  .invalidation-callout p {
+    grid-column: auto;
+  }
+}
