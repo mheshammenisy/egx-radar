@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DemoBanner from '../components/DemoBanner.jsx'
+import DecisionAnalysisPanel from '../components/DecisionAnalysisPanel.jsx'
 import LanguageToggle from '../components/LanguageToggle.jsx'
 import PriceVolumeChart from '../components/PriceVolumeChart.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
@@ -15,7 +16,7 @@ function StockDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [historyError, setHistoryError] = useState(null)
-  const { t, translateState, translateTrend, translateReason, translateTrigger, translateInvalidation } = useLanguage()
+  const { t, translateState, translateTrend, translateReason } = useLanguage()
 
   useEffect(() => {
     let cancelled = false
@@ -105,11 +106,7 @@ function StockDetailPage() {
         <div className="metric-card"><span>{t('detail.closingStrength')}</span><strong>{Math.round(stock.metrics.closingStrength * 100)}%</strong></div>
       </section>
 
-      <section className="detail-panel">
-        <div className="panel-header"><div><h2>{t('detail.triggerInvalidation')}</h2><p>{t('detail.ruleDisclaimer')}</p></div></div>
-        <p><strong>{t('detail.trigger')}</strong> {translateTrigger(stock.trigger)}</p>
-        <p><strong>{t('detail.invalidation')}</strong> {translateInvalidation(stock.invalidation)}</p>
-      </section>
+      <DecisionAnalysisPanel stock={stock} />
 
       <section className="detail-panel">
         <div className="panel-header">
