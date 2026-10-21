@@ -10,9 +10,10 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from ai_analysis import analyze_stock_with_ai
 from bootstrap import ensure_demo_seed
 from database import DEFAULT_DB_PATH, get_price_bars, get_stock_record, initialize_database, list_stocks
-from opportunity_engine import OpportunityMetrics, analyze_opportunity
+from opportunity_engine import OpportunityMetrics, TradePlan, analyze_opportunity
 
 IndexName = Literal["EGX30", "EGX70", "EGX100"]
 StateName = Literal[
@@ -28,6 +29,7 @@ DemoIndexName = Literal["EGX30", "EGX70"]
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
 RATE_LIMIT_PER_MINUTE = max(10, int(os.getenv("RATE_LIMIT_PER_MINUTE", "120")))
+AI_MIN_SCORE = max(0, min(100, int(os.getenv("AI_MIN_SCORE", "65"))))
 
 
 class MetricsModel(BaseModel):
@@ -42,6 +44,39 @@ class MetricsModel(BaseModel):
     healthyPullback: bool
 
 
+class TradePlanModel(BaseModel):
+    stance: str
+    entryReference: float | None
+    invalidationPrice: float | None
+    target1: float | None
+    target2: float | None
+    target3: float | None
+    rrTarget1: float | None
+    rrTarget2: float | None
+    rrTarget3: float | None
+    explanation: str
+
+
+class AIAnalysisRequest(BaseModel):
+    language: Literal["en", "ar"] = "en"
+
+
+class AISource(BaseModel):
+    title: str
+    url: str
+
+
+class AIAnalysisResponse(BaseModel):
+    symbol: str
+    model: str
+    summary: str
+    technicalView: str
+    newsContext: str
+    catalysts: list[str]
+    risks: list[str]
+    conclusion: str
+    sources: list[AISource]
+
 class Stock(BaseModel):
     symbol: str
     company: str
@@ -55,6 +90,9 @@ class Stock(BaseModel):
     why: list[str]
     trigger: str
     invalidation: str
+    setupSummary: str
+    tradePlan: TradePlanModel
+    aiEligible: bool
     metrics: MetricsModel
 
 
@@ -96,7 +134,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Accept", "Content-Type"],
 )
 
@@ -153,6 +191,29 @@ def _metrics_model(metrics: OpportunityMetrics) -> MetricsModel:
     )
 
 
+def _trade_plan_model(plan: TradePlan) -> TradePlanModel:
+    return TradePlanModel(
+        stance=plan.stance,
+        entryReference=plan.entry_reference,
+        invalidationPrice=plan.invalidation_price,
+        target1=plan.target_1,
+        target2=plan.target_2,
+        target3=plan.target_3,
+        rrTarget1=plan.rr_target_1,
+        rrTarget2=plan.rr_target_2,
+        rrTarget3=plan.rr_target_3,
+        explanation=plan.explanation,
+    )
+
+
+def _ai_eligible(state: StateName, score: int) -> bool:
+    return score >= AI_MIN_SCORE or state in {
+        "Accumulating",
+        "Breakout Preparation",
+        "Fresh Breakout",
+        "Healthy Pullback",
+    }
+
 def _build_stock(record: dict) -> Stock:
     bars = get_price_bars(record["symbol"], DEFAULT_DB_PATH, limit=120)
     if len(bars) < 21:
@@ -179,6 +240,9 @@ def _build_stock(record: dict) -> Stock:
         why=result.why,
         trigger=result.trigger,
         invalidation=result.invalidation,
+        setupSummary=result.setup_summary,
+        tradePlan=_trade_plan_model(result.trade_plan),
+        aiEligible=_ai_eligible(result.state, result.score),
         metrics=_metrics_model(result.metrics),
     )
 
@@ -254,3 +318,30 @@ def get_stock_history(symbol: str, limit: int = 60):
         )
         for bar in bars
     ]
+
+
+@app.post("/stocks/{symbol}/ai-analysis", response_model=AIAnalysisResponse)
+def get_ai_analysis(symbol: str, payload: AIAnalysisRequest):
+    clean_symbol = symbol.strip().upper()
+    if not clean_symbol.isalnum() or len(clean_symbol) > 12:
+        raise HTTPException(status_code=400, detail="Invalid stock symbol")
+
+    record = get_stock_record(clean_symbol, DEFAULT_DB_PATH)
+    if not record:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    stock = _build_stock(record)
+    if not stock.aiEligible:
+        raise HTTPException(
+            status_code=422,
+            detail=f"AI analysis is reserved for stronger setups (score >= {AI_MIN_SCORE} or an active positive state).",
+        )
+
+    try:
+        result = analyze_stock_with_ai(stock, payload.language)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"AI analysis failed: {exc}") from exc
+
+    return AIAnalysisResponse(symbol=stock.symbol, **result)
