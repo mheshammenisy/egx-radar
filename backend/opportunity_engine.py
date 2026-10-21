@@ -38,17 +38,107 @@ class OpportunityMetrics:
 
 
 @dataclass(frozen=True)
+class TradePlan:
+    stance: str
+    entry_reference: float | None
+    invalidation_price: float | None
+    target_1: float | None
+    target_2: float | None
+    target_3: float | None
+    rr_target_1: float | None
+    rr_target_2: float | None
+    rr_target_3: float | None
+    explanation: str
+
+
+@dataclass(frozen=True)
 class OpportunityResult:
     state: OpportunityState
     score: int
     why: list[str]
     trigger: str
     invalidation: str
+    setup_summary: str
+    trade_plan: TradePlan
     metrics: OpportunityMetrics
 
 
 def _average(values: Sequence[float]) -> float:
     return mean(values) if values else 0.0
+
+
+def _rr(entry: float, invalidation: float, target: float) -> float | None:
+    risk = entry - invalidation
+    if risk <= 0:
+        return None
+    return round((target - entry) / risk, 2)
+
+
+def _build_trade_plan(
+    state: OpportunityState,
+    score: int,
+    latest_close: float,
+    support: float,
+    resistance: float,
+    breakout_confirmation_price: float,
+    chase_risk: bool,
+    relative_volume: float,
+) -> TradePlan:
+    if state == "Distribution Warning":
+        return TradePlan(
+            stance="Risk warning",
+            entry_reference=None,
+            invalidation_price=None,
+            target_1=None,
+            target_2=None,
+            target_3=None,
+            rr_target_1=None,
+            rr_target_2=None,
+            rr_target_3=None,
+            explanation=(
+                "No bullish target plan is shown while distribution risk is active. "
+                "Wait for selling pressure to ease and the short-term structure to recover."
+            ),
+        )
+
+    if state == "Fresh Breakout":
+        entry = latest_close
+        stance = "Confirmed breakout — avoid chasing" if chase_risk else "Confirmed breakout"
+    else:
+        entry = breakout_confirmation_price
+        if state == "Breakout Preparation":
+            stance = "Positive watch — waiting for breakout confirmation"
+        elif state == "Accumulating":
+            stance = "Early positive watch — confirmation still required"
+        elif state == "Healthy Pullback":
+            stance = "Constructive pullback — watch for trend continuation"
+        elif score >= 60 and relative_volume >= 1.20:
+            stance = "Positive watch — strong activity but setup is not confirmed"
+        else:
+            stance = "Watch only — no confirmed entry setup"
+
+    invalidation_price = support
+    recent_range = max(resistance - support, resistance * 0.01)
+    target_1 = entry + recent_range * 0.50
+    target_2 = entry + recent_range
+    target_3 = entry + recent_range * 1.50
+
+    return TradePlan(
+        stance=stance,
+        entry_reference=round(entry, 2),
+        invalidation_price=round(invalidation_price, 2),
+        target_1=round(target_1, 2),
+        target_2=round(target_2, 2),
+        target_3=round(target_3, 2),
+        rr_target_1=_rr(entry, invalidation_price, target_1),
+        rr_target_2=_rr(entry, invalidation_price, target_2),
+        rr_target_3=_rr(entry, invalidation_price, target_3),
+        explanation=(
+            "Targets are transparent rule-based projections from the recent support/resistance range: "
+            "T1 = 0.5× range, T2 = 1.0× range, T3 = 1.5× range above the entry reference. "
+            "They are scenario levels, not price forecasts."
+        ),
+    )
 
 
 def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
@@ -212,21 +302,53 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
         invalidation = (
             "Warning eases if selling pressure subsides and price recovers its short-term trend"
         )
+        setup_summary = (
+            "Selling pressure is elevated. CaptoX is not showing a bullish entry plan until "
+            "the warning clears."
+        )
     elif breakout and chase_risk:
         trigger = (
             f"Breakout confirmed, but chase risk is elevated after a {daily_change_pct:.2f}% daily move; "
-            "watch for consolidation or a hold above prior resistance"
+            f"the key level to hold is the prior resistance near EGP {resistance:.2f}"
         )
         invalidation = f"Daily close below recent support near EGP {support:.2f}"
+        setup_summary = (
+            f"The breakout is technically confirmed because price closed above EGP "
+            f"{breakout_confirmation_price:.2f} with relative volume above 1.30×, "
+            "but the one-day move is already extended. Waiting for consolidation is safer than chasing."
+        )
     elif breakout:
-        trigger = "Breakout already confirmed; watch whether price holds above prior resistance"
+        trigger = (
+            f"Breakout is confirmed: price closed above EGP {breakout_confirmation_price:.2f} "
+            f"and relative volume is {relative_volume:.2f}×, above the 1.30× confirmation threshold"
+        )
         invalidation = f"Daily close below recent support near EGP {support:.2f}"
+        setup_summary = (
+            f"CaptoX sees a confirmed breakout. The next question is whether price can hold above "
+            f"the prior resistance near EGP {resistance:.2f}."
+        )
     else:
         trigger = (
-            f"Daily close above EGP {breakout_confirmation_price:.2f} "
+            f"Confirmation requires a daily close above EGP {breakout_confirmation_price:.2f} "
             "with relative volume of at least 1.30×"
         )
         invalidation = f"Daily close below recent support near EGP {support:.2f}"
+        setup_summary = (
+            f"The setup is not confirmed yet. A valid bullish confirmation needs BOTH conditions: "
+            f"a daily close above EGP {breakout_confirmation_price:.2f} and relative volume of at least 1.30×. "
+            f"Current relative volume is {relative_volume:.2f}×."
+        )
+
+    trade_plan = _build_trade_plan(
+        state=state,
+        score=final_score,
+        latest_close=latest.close,
+        support=support,
+        resistance=resistance,
+        breakout_confirmation_price=breakout_confirmation_price,
+        chase_risk=chase_risk,
+        relative_volume=relative_volume,
+    )
 
     metrics = OpportunityMetrics(
         relative_volume=round(relative_volume, 2),
@@ -246,5 +368,7 @@ def analyze_opportunity(bars: Sequence[PriceBar]) -> OpportunityResult:
         why=why,
         trigger=trigger,
         invalidation=invalidation,
+        setup_summary=setup_summary,
+        trade_plan=trade_plan,
         metrics=metrics,
     )
