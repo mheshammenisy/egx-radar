@@ -50,6 +50,10 @@ class OpportunityEngineTests(unittest.TestCase):
         self.assertEqual(result.state, "Fresh Breakout")
         self.assertTrue(result.metrics.breakout)
         self.assertGreaterEqual(result.score, 70)
+        self.assertIsNotNone(result.trade_plan.target_1)
+        self.assertIsNotNone(result.trade_plan.target_2)
+        self.assertIsNotNone(result.trade_plan.target_3)
+        self.assertGreater(result.trade_plan.target_1, result.trade_plan.entry_reference)
 
     def test_extended_breakout_keeps_state_but_gets_chase_penalty(self):
         bars = make_series(10, 0.10)
